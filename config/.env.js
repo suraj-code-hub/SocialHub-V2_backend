@@ -5,6 +5,7 @@ dotenv.config();
 const requiredEnv = [
   "PORT",
   "MONGO_URI",
+  "REDIS_URL",
   "JWT_SECRET",
   "CLOUDINARY_CLOUD_NAME",
   "CLOUDINARY_API_KEY",
