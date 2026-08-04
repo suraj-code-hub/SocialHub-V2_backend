@@ -106,7 +106,7 @@ export const instagramCallback = async (req, res) => {
   try {
     await instagramCallbackService(req.query.code, req.query.state);
 
-    return res.redirect("http://localhost:5173/accounts?connected=true");
+    return res.redirect(`${process.env.CLIENT_URL}/accounts?connected=true`);
   } catch (err) {
     return res.status(500).json({
       success: false,
