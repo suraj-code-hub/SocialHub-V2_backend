@@ -53,6 +53,7 @@ import { publishPlatformPostService } from "./platformService.js";
 export const getAccountsService = async (userId) => {
   return await SocialAccount.find({
     user: userId,
+    isActive: true,
   }).sort({
     createdAt: -1,
   });
@@ -169,8 +170,13 @@ export const deactivateAccountService = async (id) => {
 // Delete Account
 // ======================================================
 
-export const deleteAccountService = async (id) => {
-  return await SocialAccount.findByIdAndDelete(id);
+export const deleteAccountService = async (userId, accountId) => {
+  const account = await SocialAccount.findOneAndDelete({
+    _id: accountId,
+    user: userId,
+  });
+
+  return account;
 };
 
 // ======================================================
@@ -599,49 +605,6 @@ export const syncPublishedPostService = async (schedule) => {
 
   return post;
 };
-
-// ======================================================
-// Publish Scheduled Post
-// ======================================================
-
-// export const publishScheduledPostService = async (scheduleId) => {
-
-//   const schedule =
-//     await getScheduledPostByIdService(
-//       scheduleId
-//     );
-
-//   if (!schedule) {
-
-//     throw new Error(
-//       "Schedule not found"
-//     );
-
-//   }
-
-//   if (
-//     schedule.status === "Published"
-//   ) {
-
-//     return schedule;
-
-//   }
-
-//   await publishPostService(
-//     schedule
-//   );
-
-//   await syncPublishedPostService(
-//     schedule
-//   );
-
-//   schedule.status = "Published";
-
-//   await schedule.save();
-
-//   return schedule;
-
-// };
 
 // ======================================================
 // Publish Scheduled Post
@@ -1512,17 +1475,60 @@ export const syncAccountService = async (userId, platform) => {
 
 import axios from "axios";
 
-export const getRecentPostsService = async (platform) => {
+// export const getRecentPostsService = async (platform) => {
+//   if (platform === "instagram") {
+//     const response = await axios.get(
+//       `https://graph.facebook.com/v23.0/me/media`,
+//       {
+//         params: {
+//           fields:
+//             "id,caption,media_url,thumbnail_url,like_count,comments_count,timestamp",
+//           access_token: process.env.INSTAGRAM_ACCESS_TOKEN,
+//         },
+//       },
+//     );
+
+//     return response.data.data;
+//   }
+
+//   return [];
+// };
+
+export const getRecentPostsService = async (userId, platform) => {
+  const account = await SocialAccount.findOne({
+    user: userId,
+    platform,
+    isActive: true,
+  });
+
+  if (!account) {
+    throw new Error(`${platform} account not connected`);
+  }
+
   if (platform === "instagram") {
     const response = await axios.get(
-      `https://graph.facebook.com/v23.0/me/media`,
+      `https://graph.facebook.com/v23.0/${account.socialId}/media`,
       {
         params: {
           fields:
             "id,caption,media_url,thumbnail_url,like_count,comments_count,timestamp",
-          access_token: process.env.INSTAGRAM_ACCESS_TOKEN,
+          access_token: account.accessToken,
         },
-      },
+      }
+    );
+
+    return response.data.data;
+  }
+
+  if (platform === "facebook") {
+    const response = await axios.get(
+      `https://graph.facebook.com/v23.0/${account.pageId}/posts`,
+      {
+        params: {
+          fields: "id,message,full_picture,created_time",
+          access_token: account.accessToken,
+        },
+      }
     );
 
     return response.data.data;

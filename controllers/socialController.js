@@ -7,25 +7,20 @@ import {
   getDashboardDataService,
   getGrowthChartService,
   getFacebookProfileDataService,
+  getRecentPostsService,
+  reconnectAccountService,
   syncAccountService,
   updateAccountService,
-  getAccountsService
+  getAccountsService,
 } from "../services/socialService.js";
 
 import asyncHandler from "../middleware/asyncHandler.js";
 
-import {
-  successResponse,
-  errorResponse,
-} from "../utils/apiResponse.js";
+import { successResponse, errorResponse } from "../utils/apiResponse.js";
 
-import {
-  deleteAccountService,
-} from "../services/socialService.js";
+import { deleteAccountService } from "../services/socialService.js";
 
 // import asyncHandler from "../middlewares/asyncHandler.js";
-
-
 
 export const getInstagramProfile = async (req, res) => {
   try {
@@ -111,9 +106,7 @@ export const instagramCallback = async (req, res) => {
   try {
     await instagramCallbackService(req.query.code, req.query.state);
 
-    return res.redirect(
-      "http://localhost:5173/accounts?connected=true"
-    );
+    return res.redirect("http://localhost:5173/accounts?connected=true");
   } catch (err) {
     return res.status(500).json({
       success: false,
@@ -125,7 +118,8 @@ export const instagramCallback = async (req, res) => {
 export const getRecentPosts = async (req, res) => {
   try {
     const posts = await getRecentPostsService(
-      req.params.platform
+      req.user._id,
+      req.params.platform,
     );
 
     res.json({
@@ -142,9 +136,7 @@ export const getRecentPosts = async (req, res) => {
 
 export const reconnectAccount = async (req, res) => {
   try {
-    const url = await reconnectAccountService(
-      req.params.platform
-    );
+    const url = await reconnectAccountService(req.params.platform);
 
     res.json({
       success: true,
@@ -192,31 +184,25 @@ export const getAccounts = asyncHandler(async (req, res) => {
   }
 });
 
-export const getDashboardData = asyncHandler(async (req,res)=>{
+export const getDashboardData = asyncHandler(async (req, res) => {
+  const data = await getDashboardDataService(req.user._id);
 
-    const data = await getDashboardDataService(
-        req.user._id
-    );
-
-    return successResponse(res,{
-        data,
-    });
-
+  return successResponse(res, {
+    data,
+  });
 });
 
 export const deleteAccount = asyncHandler(async (req, res) => {
-  await deleteAccountService(req.user._id, req.params.id);
+  const account = await deleteAccountService(req.user._id, req.params.id);
 
-  return successResponse(
-    res,
-    {},
-    "Account deleted successfully"
-  );
+  if (!account) {
+    return errorResponse(res, "Account not found", 404);
+  }
+
+  return successResponse(res, {}, "Account deleted successfully");
 });
 
-import {
-  getFacebookPostsDataService,
-} from "../services/socialService.js";
+import { getFacebookPostsDataService } from "../services/socialService.js";
 
 export const getFacebookPagePosts = asyncHandler(async (req, res) => {
   const posts = await getFacebookPostsDataService(req.user._id);
@@ -243,17 +229,14 @@ export const getInstagramPosts = asyncHandler(async (req, res) => {
 });
 
 export const syncAccount = asyncHandler(async (req, res) => {
-  const account = await syncAccountService(
-    req.user._id,
-    req.params.platform
-  );
+  const account = await syncAccountService(req.user._id, req.params.platform);
 
   return successResponse(
     res,
     {
       account,
     },
-    "Account synced successfully"
+    "Account synced successfully",
   );
 });
 
@@ -261,7 +244,7 @@ export const updateAccount = asyncHandler(async (req, res) => {
   const account = await updateAccountService(
     req.user._id,
     req.params.id,
-    req.body
+    req.body,
   );
 
   return successResponse(
@@ -269,6 +252,6 @@ export const updateAccount = asyncHandler(async (req, res) => {
     {
       account,
     },
-    "Account updated successfully"
+    "Account updated successfully",
   );
 });

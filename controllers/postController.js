@@ -47,7 +47,31 @@ export const createPost = async (req, res) => {
       });
     }
 
-    const { caption, platform, schedule, action } = req.body;
+    const { caption, platform, schedule } = req.body;
+    const action = String(req.body.action || "").toLowerCase().trim();
+
+    if (!caption?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Caption is required",
+      });
+    }
+
+    if (!platform?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Platform is required",
+      });
+    }
+
+    const parsedSchedule = schedule ? new Date(schedule) : null;
+
+    if (schedule && Number.isNaN(parsedSchedule?.getTime())) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid schedule date and time",
+      });
+    }
 
     console.log("========== CREATE POST ==========");
     console.log(req.body);
@@ -58,14 +82,11 @@ export const createPost = async (req, res) => {
 
     if (action === "draft") {
       const post = await createPostService({
-        caption,
+        caption: caption.trim(),
         platform,
         image: imageUrl,
-
         schedule: null,
-
         status: "Draft",
-
         createdBy: req.user._id,
       });
 
@@ -81,35 +102,34 @@ export const createPost = async (req, res) => {
     // =====================================
 
     if (action === "schedule") {
+      if (!schedule || Number.isNaN(parsedSchedule?.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: "Please choose a schedule date and time",
+        });
+      }
+
       const schedulePost = await Schedule.create({
         user: req.user._id,
-
-        caption,
+        caption: caption.trim(),
         platform,
         image: imageUrl,
-
-        date: new Date(schedule).toISOString().split("T")[0],
-
-        time: new Date(schedule).toLocaleTimeString("en-IN", {
+        date: parsedSchedule.toISOString().split("T")[0],
+        time: parsedSchedule.toLocaleTimeString("en-IN", {
           hour: "2-digit",
           minute: "2-digit",
           hour12: false,
         }),
-
-        publishAt: new Date(schedule),
-
+        publishAt: parsedSchedule,
         status: "Scheduled",
       });
 
       const post = await createPostService({
-        caption,
+        caption: caption.trim(),
         platform,
         image: imageUrl,
-
-        schedule,
-
+        schedule: parsedSchedule,
         status: "Scheduled",
-
         createdBy: req.user._id,
       });
 
@@ -125,14 +145,14 @@ export const createPost = async (req, res) => {
     // Publish Now
     // =====================================
 
-    if (!imageUrl) {
-      return res.status(400).json({
-        success: false,
-        message: "Image is required for publishing",
-      });
-    }
-
     if (action === "publish") {
+      if (!imageUrl) {
+        return res.status(400).json({
+          success: false,
+          message: "Please upload an image before publishing",
+        });
+      }
+
       const account = await SocialAccount.findOne({
         user: req.user._id,
         platform: platform.toLowerCase(),
@@ -154,35 +174,25 @@ export const createPost = async (req, res) => {
 
       const result = await publishPlatformPostService(
         platform,
-
         platform === "Instagram" ? account.socialId : account.pageId,
-
         account.accessToken,
-
         imageUrl,
-
-        caption,
+        caption.trim(),
       );
 
       const post = await createPostService({
-        caption,
+        caption: caption.trim(),
         platform,
         image: imageUrl,
-
         status: "Published",
-
         publishedAt: new Date(),
-
         socialPostId: result.id || "",
-
         permalink: result.permalink || "",
-
         likes: 0,
         comments: 0,
         shares: 0,
         impressions: 0,
         reach: 0,
-
         createdBy: req.user._id,
       });
 
@@ -201,7 +211,7 @@ export const createPost = async (req, res) => {
   } catch (error) {
     console.log(error);
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });

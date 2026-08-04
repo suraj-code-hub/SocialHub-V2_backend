@@ -25,12 +25,40 @@ connectDB();
 
 const app = express();
 
-// Middlewares
-// app.use(cors());
+
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:3000",
+  "https://socia-hub-frontend.vercel.app",
+  "https://social-hub-frontend.vercel.app",
+].filter(Boolean);
+
+const isAllowedOrigin = (origin) => {
+  if (!origin) return true;
+
+  return (
+    allowedOrigins.includes(origin) ||
+    /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+    /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin) ||
+    /\.vercel\.app$/i.test(origin)
+  );
+};
+
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: function (origin, callback) {
+      if (!origin || isAllowedOrigin(origin)) {
+        return callback(null, origin || true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-requested-with"],
+    exposedHeaders: ["Content-Type", "Authorization"],
   })
 );
 

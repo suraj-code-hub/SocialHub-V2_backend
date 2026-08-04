@@ -36,7 +36,7 @@ const socialAccountSchema = new mongoose.Schema(
 
     accessToken: {
       type: String,
-      required: true,
+      default: "",
     },
 
     userAccessToken: {
