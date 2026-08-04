@@ -31,8 +31,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:3000",
-  "https://socia-hub-frontend.vercel.app",
-  "https://social-hub-frontend.vercel.app",
+  "https://social-hub-v2-frontend.vercel.app",
 ].filter(Boolean);
 
 const isAllowedOrigin = (origin) => {
