@@ -102,6 +102,7 @@ export const instagramLogin = async (req, res) => {
   }
 };
 
+
 export const instagramCallback = async (req, res) => {
   try {
     await instagramCallbackService(req.query.code, req.query.state);
